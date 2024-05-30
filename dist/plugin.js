@@ -7,7 +7,7 @@ exports.config = {
   defaultQuota: {
     type: 'number',
     min: 1,
-    label: "Quota applied to all accounts",
+    label: "Quota applied to all accounts (MB)",
     helperText: "if not set, no limitation is applied"
   },
   perAccount: {
