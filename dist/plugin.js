@@ -1,7 +1,7 @@
 exports.version = 1
 exports.description = "Limits users upload size"
-exports.apiRequired = 8.81
-exports.repo = "damienzonly/user-max-upload"
+exports.apiRequired = 8.82
+exports.repo = "damienzonly/upload-quota"
 
 exports.config = {
   perAccount: {
@@ -42,10 +42,13 @@ exports.init = async api => {
         db.put(username, used + amount)
       }
     },
-    deleting({ctx, node}) {
-      const amount = fs.statSync(node.source).size
+    async deleting({ctx, node}) {
       const username = getCurrentUsername(ctx)
       if (!username) return
+      let amount
+      try {
+        amount = (await fs.stat(node.source)).size
+      } catch { return }
       const used = Number(db.getSync(username) || 0)
       const diff = used - amount
       db.put(username, diff < 0 ? 0 : diff)
