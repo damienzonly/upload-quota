@@ -4,6 +4,12 @@ exports.apiRequired = 8.82
 exports.repo = "damienzonly/upload-quota"
 
 exports.config = {
+  defaultQuota: {
+    type: 'number',
+    min: 1,
+    label: "Quota applied to all accounts",
+    helperText: "if not set, no limitation is applied"
+  },
   perAccount: {
     type: 'array',
     fields: {
@@ -11,8 +17,9 @@ exports.config = {
       megabytes: { type: 'number', defaultValue: 100 },
     },
     min: 1,
-    label: "Decide upload quota per account"
-  },
+    helperText: "This overrides the default quota for specified accounts",
+    label: "Specify the upload quota per account"
+  }
 }
 
 const mb = v => v * 1024 * 1024
@@ -31,8 +38,13 @@ exports.init = async api => {
        * @type {{username: string, megabytes: number}[]}
        */
       const conf = api.getConfig('perAccount')
-      const userRule = conf.find(r => r.username === getCurrentUsername(ctx))
-      if (!userRule) return // no limits for this user
+      let userRule = conf.find(r => r.username === getCurrentUsername(ctx))
+      if (!userRule){
+        // check default quota
+        const megabytes = api.getConfig('defaultQuota')
+        if (!conf) return // no limits
+        userRule = {username, megabytes}
+      }
       const used = Number(db.getSync(username) || 0)
       if (used + amount > mb(userRule.megabytes)) {
         ctx.status = 413
