@@ -18,30 +18,40 @@ exports.config = {
 const mb = v => v * 1024 * 1024
 
 exports.init = async api => {
+  const fs = api.require('fs')
   const db = await api.openDb('upload_quotas')
   const { getCurrentUsername } = api.require('./auth')
-  return {
-    async middleware(ctx) {
-      const method = ctx.method.toLowerCase()
-      if (method !== 'put') return
+
+  const unsub = api.events.multi({
+    uploadStart({ctx}) {
       const amount = Number(ctx.request.headers['content-length']);
       const username = getCurrentUsername(ctx)
-      if (!username) {
-        ctx.status = 403
-        return true // deny anonymous
-      }
+      if (!username) return // ignoring anonymous
       /**
        * @type {{username: string, megabytes: number}[]}
        */
       const conf = api.getConfig('perAccount')
       const userRule = conf.find(r => r.username === getCurrentUsername(ctx))
       if (!userRule) return // no limits for this user
-      const used = Number((await db.get(username)) || 0)
-      if (used + amount > userRule.megabytes) {
+      const used = Number(db.getSync(username) || 0)
+      if (used + amount > mb(userRule.megabytes)) {
         ctx.status = 413
-        return true
+        return false
       }
-      db.put(username, used + amount)
+      return () => {
+        db.put(username, used + amount)
+      }
+    },
+    deleting({ctx, node}) {
+      const amount = fs.statSync(node.source).size
+      const username = getCurrentUsername(ctx)
+      if (!username) return
+      const used = Number(db.getSync(username) || 0)
+      const diff = used - amount
+      db.put(username, diff < 0 ? 0 : diff)
     }
+  })
+  return {
+    unload: unsub
   }
 }
