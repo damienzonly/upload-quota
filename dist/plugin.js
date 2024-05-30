@@ -25,7 +25,7 @@ exports.config = {
 const mb = v => v * 1024 * 1024
 
 exports.init = async api => {
-  const fs = api.require('fs')
+  const fs = api.require('fs/promises')
   const db = await api.openDb('upload_quotas')
   const { getCurrentUsername } = api.require('./auth')
 
@@ -57,13 +57,14 @@ exports.init = async api => {
     async deleting({ctx, node}) {
       const username = getCurrentUsername(ctx)
       if (!username) return
-      let amount
       try {
-        amount = (await fs.stat(node.source)).size
-      } catch { return }
-      const used = Number(db.getSync(username) || 0)
-      const diff = used - amount
-      db.put(username, diff < 0 ? 0 : diff)
+        const amount = (await fs.stat(node.source)).size
+        const used = Number(db.getSync(username) || 0)
+        const diff = used - amount
+        db.put(username, diff < 0 ? 0 : diff)
+      } catch (e) { 
+        return
+       }
     }
   })
   return {
