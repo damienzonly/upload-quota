@@ -1,6 +1,6 @@
-exports.version = 1
+exports.version = 1.1
 exports.description = "Limits users upload size"
-exports.apiRequired = 8.82
+exports.apiRequired = 8.85
 exports.repo = "damienzonly/upload-quota"
 
 exports.config = {
@@ -48,7 +48,7 @@ exports.init = async api => {
       const used = Number(db.getSync(username) || 0)
       if (used + amount > mb(userRule.megabytes)) {
         ctx.status = 413
-        return false
+        return api.events.stop
       }
       return () => {
         db.put(username, used + amount)
