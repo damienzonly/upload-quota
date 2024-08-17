@@ -1,4 +1,4 @@
-exports.version = 1.1
+exports.version = 1.2
 exports.description = "Limits users upload size"
 exports.apiRequired = 8.85
 exports.repo = "damienzonly/upload-quota"
@@ -38,7 +38,7 @@ exports.init = async api => {
        * @type {{username: string, megabytes: number}[]}
        */
       const conf = api.getConfig('perAccount')
-      let userRule = conf.find(r => r.username === getCurrentUsername(ctx))
+      let userRule = (conf || []).find(r => r.username === getCurrentUsername(ctx))
       if (!userRule){
         // check default quota
         const megabytes = api.getConfig('defaultQuota')
